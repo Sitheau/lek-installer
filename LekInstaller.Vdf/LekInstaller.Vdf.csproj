@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{01F9CE3A-E5DC-4CBD-BDAF-885C5C5650D0}</ProjectGuid>
+    <ProjectGuid>{564178D3-1EC3-4B16-B971-92029DAB7A65}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>LekInstaller</RootNamespace>
-    <AssemblyName>LekInstaller</AssemblyName>
+    <RootNamespace>LekInstaller.Vdf</RootNamespace>
+    <AssemblyName>LekInstaller.Vdf</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -34,15 +34,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup />
-  <ItemGroup>
-    <Compile Include="PathFinder.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Vdf\VdfObject.cs" />
-    <Compile Include="Vdf\VdfValue.cs" />
-    <Compile Include="Vdf\VdfParser.cs" />
-    <Compile Include="Vdf\VdfProperty.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
