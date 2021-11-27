@@ -3,8 +3,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.nio.channels.*;
 import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.nio.file.*;
 
 public class LekInstaller {
 
@@ -27,15 +26,20 @@ public class LekInstaller {
  
     }
 
-    public static void delete() { //TODO: go into user/downloads/mech and delete mech.exe
-        String filePath
+    public static void delete(File folder) throws IOException{ //recursively delete folders contents then delete folder, be careful :^)
+        if (folder.isDirectory()) {
+            for (File sub : folder.listFiles()) {
+                delete(sub);
+            }
+        }
+        folder.delete();
     }
 
     public static void unpack() throws IOException { //TODO: unzip installed version and delete zip
-
+       
     }
 
-    public static void build()  { //TODO: place all folders from lekmod temp folder into right spots then delete temp folder
+    public static void build()  { //TODO: run mech.exe and any other commands in it to install
 
     }
 
@@ -65,7 +69,10 @@ public class LekInstaller {
 
                 //TODO: check if there is a local ver that exists if not skip ver check
                 if(verDouble > 0.4) { //TODO: replace 0.4 with read local version
-                    delete();
+                    String mechPath = System.getProperty("user.home") + "\\Downloads\\mech";
+                    File mechFolder = new File(mechPath); //assign var to mech folder location
+
+                    delete(mechFolder); //careful with testing, needs mechFolder to already exist
                     install();
                     unpack();
                     build();
