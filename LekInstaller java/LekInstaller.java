@@ -40,10 +40,10 @@ public class LekInstaller {
         folder.delete();
     }
 
-    private static void move(String targetPath, String destPath, String oldVer) throws IOException {
+    private static void move(String targetPath, String destPath, String newVer) throws IOException {
         File fileToMove = new File(targetPath);
-        File fileDest = new File(destPath+"\\"+oldVer);
-        Files.move(fileToMove.toPath(), fileDest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        File fileDest = new File(destPath+"\\"+newVer);
+        Files.move(fileToMove.toPath(), fileDest.toPath());
     }
 
     private static void unpack(String zipFilePath, String destDir) throws IOException { //unzips target at zipFilePath into destDir, making a folder
@@ -107,35 +107,67 @@ public class LekInstaller {
                 StringBuilder sb = new StringBuilder();
                 sb.append(br.readLine());
                 br.close();
+                
                 //funky string manipulation to get the first tag out of the response of ALL tags, scrapes the first vX.X.X tag in the response as the latest version
                 String[] vTemp = sb.toString().split("v"); //weird regex to get the latest version
-                String[] verNum = vTemp[15].split("\""); //change vTemp[15] to not include vdev tags
                 
+                String[] verNum = vTemp[1].split("\""); 
                 double verDouble = Double.parseDouble(verNum[0].trim()); //convernt to double to compare
                 
-                double localModVer = 29.1;
-                double localMapVer = 3.4; //civAssetsPath+"\\Maps\\" search for folder with Lekmap+" " starter
+                String modPath = civAssetsPath + "\\DLC\\";
+                String mapPath = civAssetsPath + "\\Maps\\";
 
-                String localLekMod = "LEKMOD_v" + Double.toString(localModVer);
-                String localLekMap = "Lekmap v" + Double.toString(localMapVer);
+                File dlcFolder = new File(modPath);
+                File mapsFolder = new File(mapPath);
 
-                File modDirectory = new File(civAssetsPath+"\\DLC\\"+localLekMod); //check if file exists
-                File mapDirectory = new File(civAssetsPath+"\\Maps\\"+localLekMap); //check if file exists
-                boolean tempExists = modDirectory.exists() && mapDirectory.exists();
+                File[] LekMatches = dlcFolder.listFiles(new FilenameFilter() { //find local lek mods
+                    public boolean accept(File dlcFolder, String name)
+                    {
+                        return name.startsWith("LEKMOD");
+                    }
+                });
+                File[] mapMatches = mapsFolder.listFiles(new FilenameFilter() { //find local lek mods
+                    public boolean accept(File mapsFolder, String name)
+                    {
+                        return name.startsWith("Lekmap ");
+                    }
+                });
 
                 System.out.println("latest ver " + verDouble);
 
-                if(tempExists) {    //check if that directory already exists (if yes need to update)
-                    if(verDouble > localModVer) { //ONLY checks if LEKMOD is out of date not map, would need 2nd tag bleh
-                        File civFolder = new File(civAssetsPath); //assign var to mech folder location
-                        System.out.println("updating");
-                        
-                        install(); //add check for successful install
-                        unpack(civAssetsPath+"\\assets.zip", civAssetsPath);
-                        //delete(civFolder); //DELETE OLD
-                        move(civAssetsPath+"\\"+localLekMod, civAssetsPath+"\\DLC\\", localLekMod); //move mod folder
-                        move(civAssetsPath+"\\"+localLekMap, civAssetsPath+"\\Maps", localLekMap); //move map folder
-                        System.out.println("success");
+                if(LekMatches.length > 0 && LekMatches[0] != null) {   //does lekmod exist already?
+                    File modDirectory = LekMatches[0];
+                    String localModVer = modDirectory.getPath();
+                    String[] tempLocalModVer = localModVer.split("v");
+
+                    double localLekmodVersion = Double.parseDouble(tempLocalModVer[2]);
+                    
+                    if(verDouble > localLekmodVersion) { //is the latest tag newer
+                            System.out.println("out of date installing new");
+                            install();
+                            unpack(civAssetsPath+"\\assets.zip", civAssetsPath);
+                            
+                            if(mapMatches.length > 0 && mapMatches[0] != null) {
+                                File mapDirectory = mapMatches[0];
+                                delete(mapDirectory);
+                            }
+
+                            delete(modDirectory);
+                            mapsFolder = new File(civAssetsPath);
+                            File[] newMapMatches = mapsFolder.listFiles(new FilenameFilter() { //find local lek mods
+                                public boolean accept(File mapsFolder, String name)
+                                {
+                                    return name.startsWith("Lekmap");
+                                }
+                            });
+                            File newMapDirectory = newMapMatches[0];
+                            String newLocalMapPath =newMapDirectory.getPath();
+                            String[] tempNewMap = newLocalMapPath.split("v");
+                            double newMapver = Double.parseDouble(tempNewMap[2]);
+
+                            move(civAssetsPath+"\\LEKMOD_v"+verDouble, civAssetsPath+"\\DLC", "LEKMOD_v"+Double.toString(verDouble)); //move mod folder
+                            move(civAssetsPath+"\\Lekmap v"+newMapver, civAssetsPath+"\\Maps", "Lekmap v"+Double.toString(newMapver)); //move map folder
+                            System.out.println("successfully installed lekmod and lekmap");
                     } else {
                         System.out.println("You are up to date :^)");
                     }
@@ -144,8 +176,21 @@ public class LekInstaller {
 
                     install(); //add check for successful install
                     unpack(civAssetsPath+"\\assets.zip", civAssetsPath);
-                    move(civAssetsPath+"\\"+localLekMod, civAssetsPath+"\\DLC\\", localLekMod); //move mod folder
-                    move(civAssetsPath+"\\"+localLekMap, civAssetsPath+"\\Maps", localLekMap); //move map folder
+
+                    mapsFolder = new File(civAssetsPath);
+                    File[] newMapMatches = mapsFolder.listFiles(new FilenameFilter() { //find local lek mods
+                        public boolean accept(File mapsFolder, String name)
+                        {
+                            return name.startsWith("Lekmap");
+                        }
+                    });
+                    File newMapDirectory = newMapMatches[0];
+                    String newLocalMapPath =newMapDirectory.getPath();
+                    String[] tempNewMap = newLocalMapPath.split("v");
+                    double newMapver = Double.parseDouble(tempNewMap[2]);
+
+                    move(civAssetsPath+"\\LEKMOD_v"+verDouble, civAssetsPath+"\\DLC", "LEKMOD_v"+Double.toString(verDouble)); //move mod folder
+                    move(civAssetsPath+"\\Lekmap v"+newMapver, civAssetsPath+"\\Maps", "Lekmap v"+Double.toString(newMapver)); //move map folder
                     System.out.println("success");
                 }
                    
