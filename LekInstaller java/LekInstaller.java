@@ -10,15 +10,16 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipFile;
 import java.util.Enumeration;
+import java.util.Scanner;
 
 public class LekInstaller {
-    public static void install() { //install to preset directory
+    public static void install(String civAssetsPath) { //install to preset directory
         try {
             URL assetsUrl = new URL("https://github.com/EnormousApplePie/Lekmod/releases/latest/download/assets.zip"); //This link is the github the downloader targets /Author/repo name/releases
             HttpURLConnection connection = (HttpURLConnection) assetsUrl.openConnection();
             connection.setRequestProperty("Accept", "application/octet-stream");
             ReadableByteChannel uChannel = Channels.newChannel(connection.getInputStream());
-            String userDir = System.getenv("ProgramFiles(X86)") + "\\Steam\\steamapps\\common\\Sid Meier's Civilization V\\Assets";;
+            String userDir = civAssetsPath;
             FileOutputStream foStream = new FileOutputStream(userDir + "\\assets.zip");
             FileChannel fChannel = foStream.getChannel();
             fChannel.transferFrom(uChannel, 0, Long.MAX_VALUE);
@@ -60,7 +61,7 @@ public class LekInstaller {
                     name, size, compressedSize);
 
             // Do we need to create a directory ?
-            File file = new File(System.getenv("ProgramFiles(X86)") + "\\Steam\\steamapps\\common\\Sid Meier's Civilization V\\Assets\\"+name);
+            File file = new File(destDir+"\\"+name);
             if (name.endsWith("/")) {
                 file.mkdirs();
                 continue;
@@ -89,9 +90,37 @@ public class LekInstaller {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
+    	Scanner sc = new Scanner(System.in);
         URL tagUrl = new URL("https://api.github.com/repos/EnormousApplePie/Lekmod/tags"); //url for all tags in the repo
-        String civAssetsPath = System.getenv("ProgramFiles(X86)") + "\\Steam\\steamapps\\common\\Sid Meier's Civilization V\\Assets";
+        System.out.println("Do you want to use the default path to install lekmod? (y/n)");
+        System.out.println("e.g: C:\\Program Files (x86)\\Steam\\steamapps\\common\\Sid Meier's Civilization V\\Assets");
+        String civAssetsPath = null;
+        String answer1 = sc.nextLine();
+        
+        if(answer1.equals("n")) {
+        	System.out.println("Please enter the path to the civ 5 assets folder in the same format as above");
+        	civAssetsPath = sc.nextLine();
+        } else if (answer1.equals("y")){
+        	civAssetsPath = System.getenv("ProgramFiles(X86)")+"\\Steam\\steamapps\\common\\Sid Meier's Civilization V\\Assets";
 
+        } else {
+        	System.out.println("Incorrect input please run the program again because I am a lazy programmer");
+        	System.exit(0);
+        }
+        
+        
+        
+        
+        
+        
+        File tempCivFolder = new File(civAssetsPath);
+        boolean civExists = tempCivFolder.exists();
+        
+        if(!civExists) {
+        	System.out.println("Incorrect Path please run program again because I am a lazy programmer and its 6am");
+        	System.exit(0);;
+        }
+        
         HttpURLConnection c = (HttpURLConnection) tagUrl.openConnection(); //GET JSON for all tags
         c.setRequestMethod("GET");
         c.setRequestProperty("Content-length", "0");
@@ -144,7 +173,7 @@ public class LekInstaller {
                     
                     if(verDouble > localLekmodVersion) { //is the latest tag newer
                             System.out.println("out of date installing new");
-                            install();
+                            install(civAssetsPath);
                             unpack(civAssetsPath+"\\assets.zip", civAssetsPath);
                             
                             if(mapMatches.length > 0 && mapMatches[0] != null) {
@@ -168,13 +197,85 @@ public class LekInstaller {
                             move(civAssetsPath+"\\LEKMOD_v"+verDouble, civAssetsPath+"\\DLC", "LEKMOD_v"+Double.toString(verDouble)); //move mod folder
                             move(civAssetsPath+"\\Lekmap v"+newMapver, civAssetsPath+"\\Maps", "Lekmap v"+Double.toString(newMapver)); //move map folder
                             System.out.println("successfully installed lekmod and lekmap");
+                            //emergency clean up
+                            File leftoverMod = new File(civAssetsPath+"\\LEKMOD_v"+verDouble);
+                            File leftoverMap = new File(civAssetsPath+"\\Lekmap v"+newMapver);
+                            
+                            if(leftoverMod.exists()) {
+                            	delete(leftoverMod);
+                            }
+                            if(leftoverMap.exists()) {
+                            	delete(leftoverMod);
+                            }
+                               
                     } else {
-                        System.out.println("You are up to date :^)");
+                        System.out.println("Your lekmod up to date :^)");
+                        mapMatches = mapsFolder.listFiles(new FilenameFilter() { //find local lek mods
+                            public boolean accept(File mapsFolder, String name)
+                            {
+                                return name.startsWith("Lekmap ");
+                            }
+                        });
+                        boolean noMap = mapMatches.length > 0 && mapMatches[0] != null;
+                        if(!noMap) {
+                        	System.out.println("You do not have lekmap installed would you like to install it? (y/n) WARNING DOWNLOADS BOTH LEKMOD AND LEKMAP");
+                        	String answer = sc.nextLine();
+                        	if(answer.equals("y")) {
+                        		System.out.println("installing lek mod and lekmap");
+                        		delete(modDirectory);
+                                install(civAssetsPath); //add check for successful install
+                                unpack(civAssetsPath+"\\assets.zip", civAssetsPath);
+
+                                mapsFolder = new File(civAssetsPath);
+                                File[] newMapMatches = mapsFolder.listFiles(new FilenameFilter() { //find local lek mods
+                                    public boolean accept(File mapsFolder, String name)
+                                    {
+                                        return name.startsWith("Lekmap");
+                                    }
+                                });
+                                File newMapDirectory = newMapMatches[0];
+                                String newLocalMapPath =newMapDirectory.getPath();
+                                String[] tempNewMap = newLocalMapPath.split("v");
+                                double newMapver = Double.parseDouble(tempNewMap[2]);
+
+                                move(civAssetsPath+"\\LEKMOD_v"+verDouble, civAssetsPath+"\\DLC", "LEKMOD_v"+Double.toString(verDouble)); //move mod folder
+                                move(civAssetsPath+"\\Lekmap v"+newMapver, civAssetsPath+"\\Maps", "Lekmap v"+Double.toString(newMapver)); //move map folder
+                                System.out.println("success");
+                                //emergency clean up
+                                File leftoverMod = new File(civAssetsPath+"\\LEKMOD_v"+verDouble);
+                                File leftoverMap = new File(civAssetsPath+"\\Lekmap v"+newMapver);
+                                
+                                if(leftoverMod.exists()) {
+                                	delete(leftoverMod);
+                                }
+                                if(leftoverMap.exists()) {
+                                	delete(leftoverMod);
+                                }
+                                   
+                        	} else if(answer.equals("n")){
+                        		System.out.println("Ok good bye");
+                        		System.exit(0);
+                        		
+                        	} else {
+                                System.out.println("wrong answer (not y or n) sorry kid run it again im lazy");
+                        	}
+                        }
                     }
                 } else { //first time set up
                     System.out.println("installing first time");
-
-                    install(); //add check for successful install
+                    
+                    //edge case of only lekmap
+                    File dir = new File(civAssetsPath+"\\Maps");
+                    File[] foundFiles = dir.listFiles(new FilenameFilter() {
+                        public boolean accept(File dir, String name) {
+                            return name.startsWith("Lekmap");
+                        }
+                    });
+                    if(foundFiles.length > 0 && foundFiles[0] != null) {
+                    	System.out.println("deleting local lekmap");
+                    	delete(foundFiles[0]);
+                    }
+                    install(civAssetsPath); //add check for successful install
                     unpack(civAssetsPath+"\\assets.zip", civAssetsPath);
 
                     mapsFolder = new File(civAssetsPath);
@@ -190,10 +291,25 @@ public class LekInstaller {
                     double newMapver = Double.parseDouble(tempNewMap[2]);
 
                     move(civAssetsPath+"\\LEKMOD_v"+verDouble, civAssetsPath+"\\DLC", "LEKMOD_v"+Double.toString(verDouble)); //move mod folder
-                    move(civAssetsPath+"\\Lekmap v"+newMapver, civAssetsPath+"\\Maps", "Lekmap v"+Double.toString(newMapver)); //move map folder
+                    try {
+                    	move(civAssetsPath+"\\Lekmap v"+newMapver, civAssetsPath+"\\Maps", "Lekmap v"+Double.toString(newMapver)); //move map folder
+                    } catch(Exception e) {
+                    	System.out.println("You already have lekmap installed");
+                    }
+                    
+                    //emergency clean up
+                    File leftoverMod = new File(civAssetsPath+"\\LEKMOD_v"+verDouble);
+                    File leftoverMap = new File(civAssetsPath+"\\Lekmap v"+newMapver);
+                    
+                    if(leftoverMod.exists()) {
+                    	delete(leftoverMod);
+                    }
+                    if(leftoverMap.exists()) {
+                    	delete(leftoverMod);
+                    }
+                       
                     System.out.println("success");
                 }
-                   
         }
     }
 }
